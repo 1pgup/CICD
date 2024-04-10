@@ -1,0 +1,51 @@
+stages:
+  - build
+  - code_style_test
+  - test
+  - deploy
+
+variables:
+  ARTIFACTS_DIR: "src"
+
+build:
+  stage: build
+  script:
+    - chmod +x build.sh
+    - ./build.sh
+  artifacts:
+    paths:
+      - $ARTIFACTS_DIR/
+    expire_in: 30 days
+
+check_style:
+  stage: code_style_test
+  script:
+    - echo "Running style test..."
+    - cp materials/linters/.clang-format src/
+    - chmod +x check_clang.sh
+    - ./check_clang.sh
+  allow_failure: false
+  dependencies:
+    - build
+
+integration_test:
+  stage: test
+  script:
+    - echo "Running integration tests..."
+    - chmod +x integr_tests.sh
+    - ./integr_tests.sh
+  allow_failure: false
+  dependencies:
+    - check_style
+
+deploy:
+  stage: deploy
+  script:
+    - make -C src/cat/ all
+    - make -C src/grep/ all
+    - chmod +x copy_files.sh
+    - ./copy_files.sh
+  when: manual
+  dependencies:
+    - integration_test
+  allow_failure: false
